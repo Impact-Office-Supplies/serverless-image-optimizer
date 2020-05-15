@@ -20,8 +20,8 @@ const s3 = new AWS.S3();
  *   500x500_700x700-1800x1800
  */
 const sizeRegex = /(\d+x\d+(-|_)?)+/;
-const IMG_EXTENSION = 'PNG';
 
+const IMG_EXTENSION = 'PNG';
 const SRC_FOLDER = 'originals/';
 const DEST_FOLDER = 'processed/';
 const QUALITY = [0.6, 0.8];
@@ -29,10 +29,10 @@ const DEST_BUCKET = process.env.BUCKET;
 
 module.exports.handler = async event => {
   log('Reading options from event:\n', util.inspect(event, { depth: 5 }));
+  
   const { s3: s3Obj } = event.Records[0];
   const srcBucket = s3Obj.bucket.name;
   const srcKey = decodeURIComponent(s3Obj.object.key.replace(/\+/g, ' '));
-
   const absoluteImagePath = `${srcBucket}/${srcKey}`;
   
   // Get the sizes encoded in the path of the image
@@ -50,6 +50,7 @@ module.exports.handler = async event => {
   log('Get image from S3 done');
 
   const sizes = sizeMatch[0].split(/-|_/);
+
   for (const size of sizes) {
     log(`Resizing image to size: ${size}`);
 
