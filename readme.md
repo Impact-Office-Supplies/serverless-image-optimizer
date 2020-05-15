@@ -13,6 +13,7 @@ Output:
 
 ## Instructions
 Step 1: Install [Serverless Framework](https://www.serverless.com/)
+
 Step 2: Setup IAM user with following policy (still trying to work out best for first 5):
 ```
 {
@@ -69,18 +70,27 @@ Step 2: Setup IAM user with following policy (still trying to work out best for 
     ]
 }
 ```
+
 Step 3: Ensure to have your serverless [config set up](https://www.serverless.com/framework/docs/providers/aws/guide/credentials/) so it can deploy to AWS
+
 Step 4: You also need to make sure your bucket is configured for clients to set a public-accessible ACL by unticking these two boxes:
 ![S3 Properties](https://i.stack.imgur.com/SSdVz.png) - might need to set the JSON policy for public too as when I upload, I had to change option to public image.
+
 Step 5: Create an S3 bucket, with the folders `originals` and `processed` in it.
+
 Step 6: Set the bucket name in the `serverless.yml`
+
 Step 7: Node runtime is no longer bundled for nodejs10 and later so we need to provide an extra layer to our Lambda. I found [this Gitbub repository](https://github.com/serverlesspub/imagemagick-aws-lambda-2) which provides [a layer you can easily deploy](https://serverlessrepo.aws.amazon.com/applications/arn:aws:serverlessrepo:us-east-1:145266761615:applications~image-magick-lambda-layer). I just clicked the “Deploy” button, waited 5 minutes and I got a new private layer in my AWS account. Just update the `layers` in serverless.yml once done.
+
 Step 8: Run the deployment commands below in `Deploy`.
+
 Step 9: Add your files into S3 `/originals/` folder in the new bucket created. Note: you MUST use a sub folder for sizes (eg 500x500 or 500x500_1000x1000 folder with files in there).
 
 The layer add the required libraries in /opt/bin. That is why we need to tell ImageMagic to look in that folder.
+
 Step 10: Check CloudWatch Logs to see if there are any errors from the `index.js` file.
-Step 11: Repeat until it's working.
+
+Step 11: Repeat until it's working and CloudWatch logs shows success (or that files exist... same same).
 
 ## Deploy
 Run the following commands:
