@@ -69,6 +69,8 @@ module.exports.handler = async event => {
 
     const compressedImage = await imagemin.buffer(resizedImage, {
       plugins: [
+        imageminJpegRecompress(),
+        imageminJpegtran(),
         imageminPngquant({
           quality: QUALITY
         })
