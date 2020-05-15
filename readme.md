@@ -11,8 +11,8 @@ Input:
 
 Output:
 
-	- `/processed/500x500/test.jpg`
-	- `/processed/1000x1000/test.jpg`
+- `/processed/500x500/test.jpg`
+- `/processed/1000x1000/test.jpg`
 
 ## Instructions
 Step 1: Install [Serverless Framework](https://www.serverless.com/)
