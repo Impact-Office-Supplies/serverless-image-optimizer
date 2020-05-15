@@ -5,9 +5,12 @@ Uses S3 & Lambda to take an image in `originals` folder in S3, and turns it into
 Allows you to drop in a raw file (png, jpg), and have it process (optimize & resize) into multiple outputs.
 
 ## Example
-Input: `/originals/test.jpg`
+Input: 
+
+`/originals/test.jpg`
 
 Output:
+
 	- `/processed/500x500/test.jpg`
 	- `/processed/1000x1000/test.jpg`
 
