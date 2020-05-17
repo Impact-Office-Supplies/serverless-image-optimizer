@@ -107,3 +107,8 @@ docker run --rm -e AWS_ACCESS_KEY_ID -e AWS_SECRET_ACCESS_KEY serverless-image-o
 
 ## Notes
 - If you have an existing S3 bucket you want to use, add `- existing: true` to the serverless.yml underneath the bucket in s3.
+
+## Roadmap:
+1. Move all options from index.js at the top to the serverless.yml env variables.
+1. Describe the options in this readme.
+1. Write a medium article with instructions.
