@@ -24,8 +24,11 @@ const sizeRegex = /(\d+x\d+(-|_)?)+/;
 const IMG_EXTENSION = 'PNG';
 const SRC_FOLDER = 'originals/';
 const DEST_FOLDER = 'processed/';
-const QUALITY = [0.6, 0.8];
 const DEST_BUCKET = process.env.BUCKET;
+const QUALITY = [0.6, 0.8]; // Quality for PNGs
+const IMAGE_GRAVITY = 'Center'; // Image position in background
+const IMAGE_BACKGROUND_COLOR = '#FFFFFF'; // Background to fill any gaps in full size
+const BORDER_SIZE = 30; // Can set to 0 if no border.
 
 module.exports.handler = async event => {
   log('Reading options from event:\n', util.inspect(event, { depth: 5 }));
@@ -121,8 +124,11 @@ function resizeImage({ width, height, imgExtension, content }) {
     gm(content)
       .limit("memory", `${getEnableMemory()}MB`)
       .autoOrient()
-      .resize(width, height)
       .noProfile()
+      .resize(width - BORDER_SIZE, height - BORDER_SIZE)
+      .gravity(IMAGE_GRAVITY)
+      .background(IMAGE_BACKGROUND_COLOR)
+      .extent(width, height)
       .toBuffer(imgExtension, function(err, buffer) {
         if (err) reject(err);
         else resolve(buffer);
