@@ -4,11 +4,13 @@ const async = require('async');
 const AWS = require('aws-sdk');
 const util = require('util');
 const gm = require('gm').subClass({ imageMagick: true, binPath: "/opt/bin" });
+const fs = require('fs');
 const imagemin = require('imagemin');
 const imageminJpegRecompress = require('imagemin-jpeg-recompress');
 const imageminJpegtran = require('imagemin-jpegtran');
 const imageminPngquant = require('imagemin-pngquant');
-
+const json2csv = require('json2csv').parse;
+const csv = require('csv-parser');
 const s3 = new AWS.S3();
 
 /*
@@ -24,11 +26,13 @@ const sizeRegex = /(\d+x\d+(-|_)?)+/;
 const IMG_EXTENSION = 'PNG';
 const SRC_FOLDER = 'originals/';
 const DEST_FOLDER = 'processed/';
+const SRC_BUCKET = process.env.BUCKET;
 const DEST_BUCKET = process.env.BUCKET;
 const QUALITY = [0.6, 0.8]; // Quality for PNGs
 const IMAGE_GRAVITY = 'Center'; // Image position in background
 const IMAGE_BACKGROUND_COLOR = '#FFFFFF'; // Background to fill any gaps in full size
 const BORDER_SIZE = 30; // Can set to 0 if no border.
+const WRITE_LOG_TO_S3 = true;
 
 module.exports.handler = async event => {
   log('Reading options from event:\n', util.inspect(event, { depth: 5 }));
@@ -37,6 +41,7 @@ module.exports.handler = async event => {
   const srcBucket = s3Obj.bucket.name;
   const srcKey = decodeURIComponent(s3Obj.object.key.replace(/\+/g, ' '));
   const absoluteImagePath = `${srcBucket}/${srcKey}`;
+  let processedImages = [];
   
   // Get the sizes encoded in the path of the image
   const sizeMatch = srcKey.match(sizeRegex);
@@ -95,13 +100,19 @@ module.exports.handler = async event => {
         CacheControl: "max-age=314496000,immutable"
       })
       .promise();
+
+    processedImages.push(`${DEST_FOLDER}${dstKey}`);
   }
 
   log(`Successfully processed ${srcBucket}/${srcKey}`);
+
+  await writeLogToS3(processedImages);
 };
 
 function log(...args) {
+  console.log('================================================================================');
   console.log(...args);
+  console.log('================================================================================');
 }
 
 /**
@@ -133,5 +144,115 @@ function resizeImage({ width, height, imgExtension, content }) {
         if (err) reject(err);
         else resolve(buffer);
       });
+  });
+}
+
+function writeLogToS3(processedImagesArray) {
+  return new Promise((resolve, reject) => {
+    if (WRITE_LOG_TO_S3 === false) {
+      return;
+    }
+
+    // Initial variables
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = `${today.getMonth() + 1}`.padStart(2, "0");
+    const day = `${today.getDate()}`.padStart(2, "0");
+    const processedImagesString = processedImagesArray.join(', ');
+
+    let csvLog = [];
+    let destFilePath = null;
+    let dailyCsvName = null;
+    let s3FilePath = null;
+
+    log(`Processed Images to be logged: ${processedImagesString}`);
+
+    // Build CSV name
+    dailyCsvName = `${year}_${month}_${day}_processed_images.csv`;
+    destFilePath = '/tmp/' + dailyCsvName;
+    s3FilePath = 'csv_log/' + dailyCsvName;
+
+    log(`Looking for daily CSV: ${dailyCsvName}`);
+
+    // Check if it exists in S3 already
+    // If exists, DL it and push it into /tmp/ file
+    try {
+      s3
+        .getObject({ Bucket: SRC_BUCKET, Key: s3FilePath })
+        .createReadStream()
+        .pipe(destFilePath);
+
+      log('Found CSV Log on server');
+    } catch (error) {
+      log('No CSV Log found on server');
+    }
+
+    // Loop over each of the image names and push into /tmp/ csv
+    let writeArray = [];
+    const fields = ['name', 'date'];
+
+    for (let i = 0; i < processedImagesArray.length; i++) {
+      writeArray.push({
+        name: processedImagesArray[i],
+        date: 'test date stamp'
+      });
+    }
+
+    const csvToUpload = json2csv(writeArray, { fields });
+
+    log(csvToUpload);
+
+    // Write to file
+    fs.writeFile(destFilePath, csvToUpload, function (err) {
+       if (err) {
+         log(err);
+
+         throw error;
+       }
+
+       log('Uploaded to tmp successfully');
+    });
+
+    log('Starting test');
+
+    fs.createReadStream(destFilePath)
+      .pipe(csv())
+      .on('data', (row) => {
+        log(row);
+      })
+      .on('end', () => {
+        log('CSV file successfully read');
+      });
+
+
+    log(`File write done. Reading file from tmp...`);
+
+    // Upload file back to S3
+    fs.readFile(destFilePath, "utf8", function (err, data) {
+      log(`Read dest file from tmp`);
+
+      if (err) {
+        log(`Error reading file ${err}`);
+
+        throw err; 
+      }
+
+      const base64data = Buffer.from(data, 'binary');
+
+      log(base64data);
+
+      s3
+        .putObject({
+          Bucket: SRC_BUCKET,
+          Key: s3FilePath,
+          Body: base64data,
+          ContentType: 'application/octet-stream',
+          ContentDisposition: 'attachment',
+          CacheControl: 'public, max-age=86400'
+        })
+        .promise();
+
+      log('Upload finished to S3');
+    });
   });
 }
