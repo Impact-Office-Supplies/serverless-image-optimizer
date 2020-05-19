@@ -153,106 +153,137 @@ function writeLogToS3(processedImagesArray) {
       return;
     }
 
-    // Initial variables
-    const today = new Date();
-    const year = today.getFullYear();
-    const month = `${today.getMonth() + 1}`.padStart(2, "0");
-    const day = `${today.getDate()}`.padStart(2, "0");
-    const processedImagesString = processedImagesArray.join(', ');
+    (async () => {
 
-    let csvLog = [];
-    let destFilePath = null;
-    let dailyCsvName = null;
-    let s3FilePath = null;
+      // Initial variables
+      const today = new Date();
+      const year = today.getFullYear();
+      const month = `${today.getMonth() + 1}`.padStart(2, "0");
+      const day = `${today.getDate()}`.padStart(2, "0");
+      const processedImagesString = processedImagesArray.join(', ');
 
-    log(`Processed Images to be logged: ${processedImagesString}`);
+      let csvLog = [];
+      let destFilePath = null;
+      let dailyCsvName = null;
+      let s3FilePath = null;
+      let csvFile = null;
+      let writeArray = [];
 
-    // Build CSV name
-    dailyCsvName = `${year}_${month}_${day}_processed_images.csv`;
-    destFilePath = '/tmp/' + dailyCsvName;
-    s3FilePath = 'csv_log/' + dailyCsvName;
+      log(`Processed Images to be logged: ${processedImagesString}`);
 
-    log(`Looking for daily CSV: ${dailyCsvName}`);
+      // Build CSV name
+      dailyCsvName = `${year}_${month}_${day}_processed_images.csv`;
+      destFilePath = '/tmp/' + dailyCsvName;
+      s3FilePath = 'csv_log/' + dailyCsvName;
 
-    // Check if it exists in S3 already
-    // If exists, DL it and push it into /tmp/ file
-    try {
-      s3
-        .getObject({ Bucket: SRC_BUCKET, Key: s3FilePath })
-        .createReadStream()
-        .pipe(destFilePath);
+      log(`Looking for daily CSV: ${dailyCsvName}`);
 
-      log('Found CSV Log on server');
-    } catch (error) {
-      log('No CSV Log found on server');
-    }
+      // Check if it exists in S3 already
+      // If exists, DL it and push it into /tmp/ file
+      
+      try {
+        const currentCsv = await new Promise((resolve, reject) => {
+          let currentCsv = [];
 
-    // Loop over each of the image names and push into /tmp/ csv
-    let writeArray = [];
-    const fields = ['name', 'date'];
+          s3
+            .getObject({ Bucket: SRC_BUCKET, Key: s3FilePath }, function (err, data) {
+              if (err) {
+                log(err);
 
-    for (let i = 0; i < processedImagesArray.length; i++) {
-      writeArray.push({
-        name: processedImagesArray[i],
-        date: 'test date stamp'
-      });
-    }
+                throw err;
+              }
+            })
+            .createReadStream()
+            .pipe(csv())
+            .on('data', (row) => {
+              log(row);
 
-    const csvToUpload = json2csv(writeArray, { fields });
+              currentCsv.push(row);
+            })
+            .on('end', () => {
+              log('CSV file successfully read');
 
-    log(csvToUpload);
+              resolve(currentCsv);
+            });
+        });
 
-    // Write to file
-    fs.writeFile(destFilePath, csvToUpload, function (err) {
-       if (err) {
-         log(err);
+        writeArray = writeArray.concat(currentCsv);
 
-         throw error;
-       }
-
-       log('Uploaded to tmp successfully');
-    });
-
-    log('Starting test');
-
-    fs.createReadStream(destFilePath)
-      .pipe(csv())
-      .on('data', (row) => {
-        log(row);
-      })
-      .on('end', () => {
-        log('CSV file successfully read');
-      });
-
-
-    log(`File write done. Reading file from tmp...`);
-
-    // Upload file back to S3
-    fs.readFile(destFilePath, "utf8", function (err, data) {
-      log(`Read dest file from tmp`);
-
-      if (err) {
-        log(`Error reading file ${err}`);
-
-        throw err; 
+        log('Found CSV Log on server');
+      } catch (error) {
+        log('No CSV Log found on server');
+        log(error);
       }
 
-      const base64data = Buffer.from(data, 'binary');
+      // Loop over each of the image names and push into /tmp/ csv
+      
+      const fields = ['name', 'date'];
 
-      log(base64data);
+      for (let i = 0; i < processedImagesArray.length; i++) {
+        writeArray.push({
+          name: processedImagesArray[i],
+          date: 'test date stamp'
+        });
+      }
 
-      s3
-        .putObject({
-          Bucket: SRC_BUCKET,
-          Key: s3FilePath,
-          Body: base64data,
-          ContentType: 'application/octet-stream',
-          ContentDisposition: 'attachment',
-          CacheControl: 'public, max-age=86400'
+      const csvToUpload = json2csv(writeArray, { fields });
+
+      log(csvToUpload);
+
+      // Write to file
+      await fs
+        .promises
+        .writeFile(destFilePath, csvToUpload, function (err) {
+           if (err) {
+             log(err);
+
+             throw error;
+           }
+
+           log('Uploaded to tmp successfully');
+        });
+
+      log('Starting test');
+
+      await fs
+        .createReadStream(destFilePath)
+        .pipe(csv())
+        .on('data', (row) => {
+          log(row);
         })
-        .promise();
+        .on('end', () => {
+          log('CSV file successfully read');
+        });
 
-      log('Upload finished to S3');
-    });
+      // Upload file back to S3
+      await fs
+        .promises
+        .readFile(destFilePath, "utf8", function (err, data) {
+          log(`Read dest file from tmp`);
+
+          if (err) {
+            log(`Error reading file ${err}`);
+
+            throw err; 
+          }
+
+          const base64data = Buffer.from(data, 'binary');
+
+          log(base64data);
+
+          s3
+            .putObject({
+              Bucket: SRC_BUCKET,
+              Key: s3FilePath,
+              Body: base64data,
+              ContentType: 'application/octet-stream',
+              ContentDisposition: 'attachment',
+              CacheControl: 'public, max-age=86400'
+            })
+            .promise();
+
+          log('Upload finished to S3');
+        });
+    })();
   });
 }
