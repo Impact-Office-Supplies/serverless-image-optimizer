@@ -7,7 +7,7 @@ Allows you to drop in a raw file (png, jpg), and have it process (optimize & res
 ## Example
 Input: 
 
-`/originals/test.jpg`
+`/originals/500x500_1000x1000/test.jpg`
 
 Output:
 
