@@ -222,7 +222,7 @@ function writeLogToS3(processedImagesArray) {
       for (let i = 0; i < processedImagesArray.length; i++) {
         writeArray.push({
           name: processedImagesArray[i],
-          date: 'test date stamp'
+          date: today.toISOString()
         });
       }
 
@@ -257,7 +257,6 @@ function writeLogToS3(processedImagesArray) {
 
       // Upload file back to S3
       await fs
-        .promises
         .readFile(destFilePath, "utf8", function (err, data) {
           log(`Read dest file from tmp`);
 
