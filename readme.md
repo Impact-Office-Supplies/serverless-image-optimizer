@@ -77,7 +77,7 @@ Step 2: Setup IAM user with following policy (still trying to work out best for 
 Step 3: Ensure to have your serverless [config set up](https://www.serverless.com/framework/docs/providers/aws/guide/credentials/) so it can deploy to AWS
 
 Step 4: You also need to make sure your bucket is configured for clients to set a public-accessible ACL by unticking these two boxes:
-![S3 Properties](https://i.stack.imgur.com/SSdVz.png) - might need to set the JSON policy for public too as when I upload, I had to change option to public image.
+![S3 Properties](https://i.stack.imgur.com/SSdVz.png)
 
 Step 5: Create an S3 bucket, with the folders `originals` and `processed` in it.
 
