@@ -140,7 +140,7 @@ function resizeImage({ width, height, imgExtension, content }) {
       .gravity(IMAGE_GRAVITY)
       .background(IMAGE_BACKGROUND_COLOR)
       .extent(width, height)
-      .toBuffer(imgExtension, function(err, buffer) {
+      .toBuffer(function(err, buffer) {
         if (err) reject(err);
         else resolve(buffer);
       });
@@ -181,7 +181,22 @@ function writeLogToS3(processedImagesArray) {
       // Check if it exists in S3 already
       // If exists, DL it and push it into /tmp/ file
       
-      try {
+      const currentCsvExists = await s3
+        .headObject({ Bucket: SRC_BUCKET, Key: s3FilePath })
+        .promise()
+        .then(
+          () => true,
+          err => {
+            if (err.code === 'NotFound') {
+              return false;
+            }
+            throw err;
+          }
+        );
+
+      log(`Does current CSV Log file exist? ${currentCsvExists}`);
+
+      if (currentCsvExists) {
         const currentCsv = await new Promise((resolve, reject) => {
           let currentCsv = [];
 
@@ -210,11 +225,10 @@ function writeLogToS3(processedImagesArray) {
         writeArray = writeArray.concat(currentCsv);
 
         log('Found CSV Log on server');
-      } catch (error) {
-        log('No CSV Log found on server');
-        log(error);
+      } else {
+        log('No CSV Log found on server, creating new one.');
       }
-
+      
       // Loop over each of the image names and push into /tmp/ csv
       
       const fields = ['name', 'date'];

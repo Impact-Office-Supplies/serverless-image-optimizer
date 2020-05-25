@@ -9,10 +9,13 @@ provider:
   iamRoleStatements:
     - Effect: "Allow"
       Action:
+        - "s3:ListBucket"
         - "s3:GetObject"
         - "s3:PutObject"
         - "s3:PutObjectAcl"
-      Resource: "arn:aws:s3:::ios-product-images-optimizer/*"
+      Resource: 
+        - "arn:aws:s3:::ios-product-images-optimizer"
+        - "arn:aws:s3:::ios-product-images-optimizer/*"
 
 functions:
   s3_statements:
@@ -28,4 +31,3 @@ functions:
           event: s3:ObjectCreated:*
           rules:
             - prefix: originals/
-            - suffix: .png
