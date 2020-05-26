@@ -75,17 +75,24 @@ module.exports.handler = async event => {
 
     log(`Compressing image. Quality: ${QUALITY[0]} to ${QUALITY[1]}`);
 
-    const compressedImage = await imagemin.buffer(resizedImage, {
-      plugins: [
-        imageminJpegRecompress(),
-        imageminJpegtran(),
-        imageminPngquant({
-          quality: QUALITY
-        })
-      ],
-    });
+    let compressedImage = resizedImage;
 
-    log('Image compression complete');
+    try {
+      compressedImage = await imagemin.buffer(resizedImage, {
+        plugins: [
+          imageminJpegRecompress(),
+          imageminJpegtran(),
+          imageminPngquant({
+            quality: QUALITY
+          })
+        ],
+      });
+
+      log('Image compression complete');
+    } catch (error) {
+      log('[Handled Error] Could not compress image, using resized image only. Error details below:');
+      log(error);
+    }
 
     const dstKey = srcKey.split(SRC_FOLDER)[1].replace(sizeRegex, size);
     
@@ -211,7 +218,7 @@ function writeLogToS3(processedImagesArray) {
             .createReadStream()
             .pipe(csv())
             .on('data', (row) => {
-              log(row);
+              // log(row);
 
               currentCsv.push(row);
             })
@@ -257,17 +264,17 @@ function writeLogToS3(processedImagesArray) {
            log('Uploaded to tmp successfully');
         });
 
-      log('Starting test');
+      // log('Starting test');
 
-      await fs
-        .createReadStream(destFilePath)
-        .pipe(csv())
-        .on('data', (row) => {
-          log(row);
-        })
-        .on('end', () => {
-          log('CSV file successfully read');
-        });
+      // await fs
+      //   .createReadStream(destFilePath)
+      //   .pipe(csv())
+      //   .on('data', (row) => {
+          // log(row);
+      //   })
+      //   .on('end', () => {
+      //     log('CSV file successfully read');
+      //   });
 
       // Upload file back to S3
       await fs
@@ -281,8 +288,6 @@ function writeLogToS3(processedImagesArray) {
           }
 
           const base64data = Buffer.from(data, 'binary');
-
-          log(base64data);
 
           s3
             .putObject({
