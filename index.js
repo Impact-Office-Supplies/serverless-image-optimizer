@@ -11,7 +11,9 @@ const imageminJpegtran = require('imagemin-jpegtran');
 const imageminPngquant = require('imagemin-pngquant');
 const json2csv = require('json2csv').parse;
 const csv = require('csv-parser');
-const s3 = new AWS.S3();
+const s3 = new AWS.S3({
+  timeout: 300000 // Matching Lambda function timeout
+});
 
 /*
  * I am encoding the size for the images in the folder name.

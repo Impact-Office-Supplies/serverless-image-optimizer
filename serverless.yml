@@ -22,7 +22,8 @@ functions:
     handler: index.handler
     environment:
       BUCKET: ios-product-images-optimizer
-    timeout: 60
+    timeout: 30
+    reservedConcurrency: 5
     layers:
       - arn:aws:lambda:ap-southeast-2:789885589778:layer:image-magick:1
     events:
