@@ -5,7 +5,7 @@ provider:
   name: aws
   runtime: nodejs12.x
   region: ap-southeast-2
-  memorySize: 1024
+  memorySize: 2056
   iamRoleStatements:
     - Effect: "Allow"
       Action:
@@ -22,8 +22,8 @@ functions:
     handler: index.handler
     environment:
       BUCKET: ios-product-images-optimizer
-    timeout: 30
-    reservedConcurrency: 5
+    timeout: 60
+    reservedConcurrency: 100
     layers:
       - arn:aws:lambda:ap-southeast-2:789885589778:layer:image-magick:1
     events:

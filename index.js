@@ -12,7 +12,9 @@ const imageminPngquant = require('imagemin-pngquant');
 const json2csv = require('json2csv').parse;
 const csv = require('csv-parser');
 const s3 = new AWS.S3({
-  timeout: 300000 // Matching Lambda function timeout
+  maxRetries: 3,
+  httpOptions: {timeout: 60000, connectTimeout: 20000},
+  timeout: 60000 // Matching Lambda function timeout
 });
 
 /*
@@ -34,7 +36,7 @@ const QUALITY = [0.6, 0.8]; // Quality for PNGs
 const IMAGE_GRAVITY = 'Center'; // Image position in background
 const IMAGE_BACKGROUND_COLOR = '#FFFFFF'; // Background to fill any gaps in full size
 const BORDER_SIZE = 30; // Can set to 0 if no border.
-const WRITE_LOG_TO_S3 = true;
+const WRITE_LOG_TO_S3 = false;
 
 module.exports.handler = async event => {
   log('Reading options from event:\n', util.inspect(event, { depth: 5 }));
@@ -100,22 +102,31 @@ module.exports.handler = async event => {
     
     log(`Uploading processed image to: ${dstKey}`);
 
-    await s3
-      .putObject({
-        Bucket: DEST_BUCKET,
-        Key: `${DEST_FOLDER}${dstKey}`,
-        Body: compressedImage,
-        ContentType: response.ContentType,
-        CacheControl: "max-age=314496000,immutable"
-      })
+    try {
+      await s3
+        .putObject({
+          Bucket: DEST_BUCKET,
+          Key: `${DEST_FOLDER}${dstKey}`,
+          Body: compressedImage,
+          ContentType: response.ContentType,
+          CacheControl: "max-age=314496000,immutable"
+        })
       .promise();
 
-    processedImages.push(`${DEST_FOLDER}${dstKey}`);
+      log(`Uploaded processed image complete to: ${dstKey}`);
+
+      processedImages.push(`${DEST_FOLDER}${dstKey}`);
+    } catch (err) {
+      log('[Non-handled Error Below] Resized image failed upload.');
+      log(err);
+    }
   }
 
   log(`Successfully processed ${srcBucket}/${srcKey}`);
 
-  await writeLogToS3(processedImages);
+  if (WRITE_LOG_TO_S3 === true) {
+    await writeLogToS3(processedImages);
+  }
 };
 
 function log(...args) {
@@ -149,7 +160,7 @@ function resizeImage({ width, height, imgExtension, content }) {
       .gravity(IMAGE_GRAVITY)
       .background(IMAGE_BACKGROUND_COLOR)
       .extent(width, height)
-      .toBuffer(function(err, buffer) {
+      .toBuffer('jpeg', function(err, buffer) {
         if (err) reject(err);
         else resolve(buffer);
       });
@@ -158,10 +169,6 @@ function resizeImage({ width, height, imgExtension, content }) {
 
 function writeLogToS3(processedImagesArray) {
   return new Promise((resolve, reject) => {
-    if (WRITE_LOG_TO_S3 === false) {
-      return;
-    }
-
     (async () => {
 
       // Initial variables
@@ -209,26 +216,38 @@ function writeLogToS3(processedImagesArray) {
         const currentCsv = await new Promise((resolve, reject) => {
           let currentCsv = [];
 
-          s3
-            .getObject({ Bucket: SRC_BUCKET, Key: s3FilePath }, function (err, data) {
-              if (err) {
-                log(err);
+          try {
+            let stream = s3
+              .getObject({ Bucket: SRC_BUCKET, Key: s3FilePath }, function (err, data) {
+                if (err) {
+                  log(err);
 
-                throw err;
-              }
-            })
-            .createReadStream()
-            .pipe(csv())
-            .on('data', (row) => {
-              // log(row);
+                  throw err;
+                }
+              })
+              .createReadStream();
 
-              currentCsv.push(row);
-            })
-            .on('end', () => {
-              log('CSV file successfully read');
+            stream
+              .pipe(csv())
+              .on('data', (row) => {
+                // log(row);
 
-              resolve(currentCsv);
-            });
+                currentCsv.push(row);
+              })
+              .on('error', () => {
+                stream.end();
+              })
+              .on('end', () => {
+                log('CSV file successfully read');
+
+                resolve(currentCsv);
+              });
+          } catch (err) {
+            log('Error reading stream for CSV');
+            log(err);
+            
+            if (stream) stream.end();
+          }
         });
 
         writeArray = writeArray.concat(currentCsv);
@@ -265,18 +284,6 @@ function writeLogToS3(processedImagesArray) {
 
            log('Uploaded to tmp successfully');
         });
-
-      // log('Starting test');
-
-      // await fs
-      //   .createReadStream(destFilePath)
-      //   .pipe(csv())
-      //   .on('data', (row) => {
-          // log(row);
-      //   })
-      //   .on('end', () => {
-      //     log('CSV file successfully read');
-      //   });
 
       // Upload file back to S3
       await fs
