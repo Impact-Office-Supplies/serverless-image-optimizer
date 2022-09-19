@@ -1,9 +1,8 @@
-service:
-  name: serverless-image-optimizer-v8
+service: serverless-image-optimizer-v9
 
 provider:
   name: aws
-  runtime: nodejs12.x
+  runtime: nodejs16.x
   region: ap-southeast-2
   memorySize: 2056
   iamRoleStatements:
@@ -14,21 +13,21 @@ provider:
         - "s3:PutObject"
         - "s3:PutObjectAcl"
       Resource: 
-        - "arn:aws:s3:::ios-product-images-optimizer"
-        - "arn:aws:s3:::ios-product-images-optimizer/*"
+        - "arn:aws:s3:::ios-product-images-optimizer-v9"
+        - "arn:aws:s3:::ios-product-images-optimizer-v9/*"
 
 functions:
   s3_statements:
     handler: index.handler
     environment:
-      BUCKET: ios-product-images-optimizer
+      BUCKET: ios-product-images-optimizer-v9
     timeout: 60
     reservedConcurrency: 100
     layers:
       - arn:aws:lambda:ap-southeast-2:789885589778:layer:image-magick:1
     events:
       - s3:
-          bucket: ios-product-images-optimizer
+          bucket: ios-product-images-optimizer-v9
           event: s3:ObjectCreated:*
           rules:
             - prefix: originals/

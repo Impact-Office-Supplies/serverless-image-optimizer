@@ -2,6 +2,10 @@ FROM lambci/lambda:build-nodejs12.x
 
 RUN yum install -y libpng-devel libjpeg-devel libwebp-tools libglvnd-glx libXi
 
+# Upgrade to node 16
+RUN npm install -g n
+RUN n 16
+
 COPY package*.json ./
 RUN npm install
 

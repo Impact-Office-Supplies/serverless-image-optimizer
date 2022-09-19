@@ -53,6 +53,8 @@ Step 2: Setup IAM user with following policy (still trying to work out best for 
                 "lambda:GetFunctionConfiguration",
                 "lambda:AddPermission",
                 "lambda:UpdateFunctionCode",
+                "lambda:TagResource",
+                "lambda:RemovePermission",
                 "lambda:GetLayerVersion",
                 "lambda:PutFunctionConcurrency",
                 "lambda:GetFunctionConcurrency",
@@ -99,13 +101,13 @@ Step 10: Check CloudWatch Logs to see if there are any errors from the `index.js
 Step 11: Repeat until it's working and CloudWatch logs shows success (or that files exist... same same).
 
 ## Deploy
-Run the following commands:
+Run the following commands from within the project folder:
 ```
 export AWS_ACCESS_KEY_ID="xxxxxx"
 export AWS_SECRET_ACCESS_KEY="yyyyyy"
 
 docker build -t serverless-image-optimizer .
-docker run --rm -e AWS_ACCESS_KEY_ID -e AWS_SECRET_ACCESS_KEY serverless-image-optimizer
+docker run --platform linux/amd64 --rm -e AWS_ACCESS_KEY_ID -e AWS_SECRET_ACCESS_KEY serverless-image-optimizer
 ```
 
 ## Notes

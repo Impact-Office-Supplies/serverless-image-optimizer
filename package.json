@@ -1,11 +1,11 @@
 {
-  "name": "serverless-image-optimizer",
+  "name": "serverless-image-optimizer-v9",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
   "engines": {
-    "node": ">=12.10 <13.0",
-    "npm": ">=6.11.3"
+    "node": ">=16.10 <17.0",
+    "npm": ">=8.0"
   },
   "dependencies": {
     "async": "^3.1.0",
@@ -21,6 +21,6 @@
     "json2csv": "^5.0.1"
   },
   "devDependencies": {
-    "serverless": "^1.60.4"
+    "serverless": "^3.22.0"
   }
 }
