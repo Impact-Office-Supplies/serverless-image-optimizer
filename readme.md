@@ -54,6 +54,7 @@ Step 2: Setup IAM user with following policy (still trying to work out best for 
                 "lambda:AddPermission",
                 "lambda:UpdateFunctionCode",
                 "lambda:TagResource",
+                "lambda:ListTags",
                 "lambda:RemovePermission",
                 "lambda:GetLayerVersion",
                 "lambda:PutFunctionConcurrency",
