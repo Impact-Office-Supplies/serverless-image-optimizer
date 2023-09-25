@@ -102,6 +102,7 @@ module.exports.handler = async event => {
     
     log(`Uploading processed image to: ${dstKey}`);
 
+    // Upload to S3, max age = 1 week, 2 mins to serve old content while revalidating, 1d to serve stale content if there's an error
     try {
       await s3
         .putObject({
@@ -109,7 +110,7 @@ module.exports.handler = async event => {
           Key: `${DEST_FOLDER}${dstKey}`,
           Body: compressedImage,
           ContentType: response.ContentType,
-          CacheControl: "max-age=314496000,immutable"
+          CacheControl: "max-age=604800, stale-while-revalidate=120, stale-if-error=86400"
         })
       .promise();
 
