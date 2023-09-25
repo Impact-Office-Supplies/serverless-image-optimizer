@@ -110,7 +110,7 @@ module.exports.handler = async event => {
           Key: `${DEST_FOLDER}${dstKey}`,
           Body: compressedImage,
           ContentType: response.ContentType,
-          CacheControl: "max-age=604800, stale-while-revalidate=120, stale-if-error=86401"
+          CacheControl: "max-age=604800, stale-while-revalidate=120, stale-if-error=86400"
         })
       .promise();
 

@@ -113,6 +113,7 @@ docker run --platform linux/amd64 --rm -e AWS_ACCESS_KEY_ID -e AWS_SECRET_ACCESS
 
 ## Notes
 - If you have an existing S3 bucket you want to use, add `- existing: true` to the serverless.yml underneath the bucket in S3.
+- If you're stuck in "UPDATE_ROLLBACK_FAILED" status, go into CloudFormation in the "Stacks", find your stack, and then go "Stack Actions" and then "Continue Update Rollback"
 
 ## Roadmap:
 1. Move all options from index.js at the top to the serverless.yml env variables.
